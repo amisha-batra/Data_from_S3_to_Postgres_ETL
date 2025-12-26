@@ -1,12 +1,12 @@
 **S3 to PostgreSQL ETL Pipeline Using Apache Airflow**
 
 This project implements an end-to-end ETL (Extract, Transform, Load) pipeline using Apache Airflow (Astro runtime) to move data from Amazon S3 into a PostgreSQL database. The pipeline is designed using Airflow’s TaskFlow API and follows a clear, modular structure that mirrors real-world data engineering practices.
-**
+
 DAG Overview and Scheduling
-**
+
 The pipeline is defined as an Airflow DAG scheduled to run daily with catchup disabled, ensuring that only current data is processed. The DAG orchestrates multiple tasks with explicit dependencies, guaranteeing that each step executes in the correct order.
-**
-Table Creation and Database Preparation**
+
+Table Creation and Database Preparation
 
 The first task in the pipeline ensures that the target PostgreSQL table exists before any data is loaded. Using Airflow’s PostgresHook, a CREATE TABLE IF NOT EXISTS statement is executed, making the task idempotent. This prevents failures during data loading and allows the pipeline to be safely re-run multiple times.
 
