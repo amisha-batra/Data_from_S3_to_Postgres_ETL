@@ -1,0 +1,11 @@
+order_id,order_date,customer_id,region,product,quantity,unit_price
+1001,2024-12-01,CUST001,North,Laptop,2,55000
+1002,2024-12-01,CUST002,South,Mobile,1,25000
+1003,2024-12-02,CUST003,East,Headphones,3,2000
+1004,2024-12-02,CUST004,West,Monitor,1,12000
+1005,2024-12-03,CUST005,North,Keyboard,4,1500
+1006,2024-12-03,CUST006,South,Mouse,5,800
+1007,2024-12-04,CUST007,East,Laptop,1,60000
+1008,2024-12-04,CUST008,West,Mobile,2,23000
+1009,2024-12-05,CUST009,North,Tablet,1,30000
+1010,2024-12-05,CUST010,South,Monitor,2,11000
