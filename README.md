@@ -1,45 +1,31 @@
-Overview
-========
+**S3 to PostgreSQL ETL Pipeline Using Apache Airflow**
 
-Welcome to Astronomer! This project was generated after you ran 'astro dev init' using the Astronomer CLI. This readme describes the contents of the project, as well as how to run Apache Airflow on your local machine.
+This project implements an end-to-end ETL (Extract, Transform, Load) pipeline using Apache Airflow (Astro runtime) to move data from Amazon S3 into a PostgreSQL database. The pipeline is designed using Airflow’s TaskFlow API and follows a clear, modular structure that mirrors real-world data engineering practices.
+**
+DAG Overview and Scheduling
+**
+The pipeline is defined as an Airflow DAG scheduled to run daily with catchup disabled, ensuring that only current data is processed. The DAG orchestrates multiple tasks with explicit dependencies, guaranteeing that each step executes in the correct order.
+**
+Table Creation and Database Preparation**
 
-Project Contents
-================
+The first task in the pipeline ensures that the target PostgreSQL table exists before any data is loaded. Using Airflow’s PostgresHook, a CREATE TABLE IF NOT EXISTS statement is executed, making the task idempotent. This prevents failures during data loading and allows the pipeline to be safely re-run multiple times.
 
-Your Astro project contains the following files and folders:
+Data Extraction from Amazon S3
 
-- dags: This folder contains the Python files for your Airflow DAGs. By default, this directory includes one example DAG:
-    - `example_astronauts`: This DAG shows a simple ETL pipeline example that queries the list of astronauts currently in space from the Open Notify API and prints a statement for each astronaut. The DAG uses the TaskFlow API to define tasks in Python, and dynamic task mapping to dynamically print a statement for each astronaut. For more on how this DAG works, see our [Getting started tutorial](https://www.astronomer.io/docs/learn/get-started-with-airflow).
-- Dockerfile: This file contains a versioned Astro Runtime Docker image that provides a differentiated Airflow experience. If you want to execute other commands or overrides at runtime, specify them here.
-- include: This folder contains any additional files that you want to include as part of your project. It is empty by default.
-- packages.txt: Install OS-level packages needed for your project by adding them to this file. It is empty by default.
-- requirements.txt: Install Python packages needed for your project by adding them to this file. It is empty by default.
-- plugins: Add custom or community plugins for your project to this file. It is empty by default.
-- airflow_settings.yaml: Use this local-only file to specify Airflow Connections, Variables, and Pools instead of entering them in the Airflow UI as you develop DAGs in this project.
+The extract task connects to Amazon S3 using Airflow’s S3Hook and reads a CSV file from a specified bucket. The file is loaded entirely as a string, representing the raw CSV content. This string is returned by the task and stored in Airflow’s XCom system, which allows downstream tasks to access the extracted data.
 
-Deploy Your Project Locally
-===========================
+Data Transformation Using Pandas
 
-Start Airflow on your local machine by running 'astro dev start'.
+The transform task receives the CSV string from XCom and converts it into a Pandas DataFrame using StringIO. This enables file-like reading of in-memory strings. Data cleaning and transformation steps are then applied, including filtering invalid records, computing derived metrics such as total transaction amount, removing duplicates, and handling missing numeric values using mean imputation. After transformation, the DataFrame is serialized into a JSON string using to_json(orient='records'), making it safe to pass between Airflow tasks.
 
-This command will spin up five Docker containers on your machine, each for a different Airflow component:
+Data Loading into PostgreSQL
 
-- Postgres: Airflow's Metadata Database
-- Scheduler: The Airflow component responsible for monitoring and triggering tasks
-- DAG Processor: The Airflow component responsible for parsing DAGs
-- API Server: The Airflow component responsible for serving the Airflow UI and API
-- Triggerer: The Airflow component responsible for triggering deferred tasks
+The load task receives the transformed JSON string from XCom and reconstructs the Pandas DataFrame. Since PostgreSQL does not accept DataFrames directly, each row of the DataFrame is converted into a tuple, with values ordered to match the database schema. These tuples are collected into a list and inserted into PostgreSQL in bulk using PostgresHook’s insert_rows method, ensuring efficient and reliable data loading.
 
-When all five containers are ready the command will open the browser to the Airflow UI at http://localhost:8080/. You should also be able to access your Postgres Database at 'localhost:5432/postgres' with username 'postgres' and password 'postgres'.
+Data Flow and XCom Usage
 
-Note: If you already have either of the above ports allocated, you can either [stop your existing Docker containers or change the port](https://www.astronomer.io/docs/astro/cli/troubleshoot-locally#ports-are-not-available-for-my-local-airflow-webserver).
+Data flows through the pipeline in multiple representations: as a CSV file in S3, a CSV string in Airflow, a DataFrame during transformation, a JSON string stored in XCom, and finally as structured rows in PostgreSQL. XCom acts as the communication layer between tasks, enabling safe and serialized data transfer across task boundaries.
 
-Deploy Your Project to Astronomer
-=================================
+Key Engineering Practices Demonstrated
 
-If you have an Astronomer account, pushing code to a Deployment on Astronomer is simple. For deploying instructions, refer to Astronomer documentation: https://www.astronomer.io/docs/astro/deploy-code/
-
-Contact
-=======
-
-The Astronomer CLI is maintained with love by the Astronomer team. To report a bug or suggest a change, reach out to our support.
+This pipeline demonstrates important data engineering best practices, including separation of extract, transform, and load responsibilities, idempotent database operations, safe data serialization, bulk database inserts, and clean DAG dependency management. The design is scalable, maintainable, and suitable for production-style ETL workflows.
